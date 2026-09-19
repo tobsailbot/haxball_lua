@@ -1,37 +1,31 @@
 local alexgames = require("alexgames")
 local draw = {}
 
--- Dibuja el fondo, líneas y arcos
 local function draw_field()
-    -- Limites rectangulo 800 x 480
     alexgames.draw_rect('#c7c7c7', 0, 0, 480, 800)
     alexgames.draw_rect('#327134', 4, 4, 476, 796)
-
-    -- Campo de juego 
     alexgames.draw_rect('#4CAF50', 60, 50, 420, 750)
-    
-    -- Círculo central (usamos el verde de fondo como relleno para simular transparencia)
     alexgames.draw_circle('#4CAF50', '#ffffff', 240, 400, 70, 2)
-    
-    -- Línea central     (color, grosor, y1, x1,  y2,  x2)
     alexgames.draw_line('#ffffff', 2, 60, 400, 420, 400)
-    
-    -- Arcos (representados por ahora como líneas más gruesas en los bordes)
-    alexgames.draw_line('#ffffff', 4, 180, 50, 300, 50)     -- Arco izquierdo
-    alexgames.draw_line('#ffffff', 4, 180, 750, 300, 750)   -- Arco derecho
+    alexgames.draw_line('#ffffff', 4, 180, 50, 300, 50)
+    alexgames.draw_line('#ffffff', 4, 180, 750, 300, 750)
 end
 
 function draw.render(state)
     alexgames.draw_clear()
     
-    -- Dibuja la cancha estática
     draw_field()
     
-    -- Jugador (Rojo)
-    alexgames.draw_circle('#ff0000', '#000000', math.floor(state.player.y), math.floor(state.player.x), state.player.radius)
+    -- Configurar borde del jugador según el estado de pateo
+    local p_outline = '#000000'
+    local p_thickness = 1
+    if state.player.kicking then
+        p_outline = '#ffffff'
+        p_thickness = 3
+    end
     
-    -- Pelota (Blanca)
-    alexgames.draw_circle('#ffffff', '#000000', math.floor(state.ball.y), math.floor(state.ball.x), state.ball.radius)
+    alexgames.draw_circle('#ff0000', p_outline, math.floor(state.player.y), math.floor(state.player.x), state.player.radius, p_thickness)
+    alexgames.draw_circle('#ffffff', '#000000', math.floor(state.ball.y), math.floor(state.ball.x), state.ball.radius, 1)
     
     alexgames.draw_refresh()
 end
