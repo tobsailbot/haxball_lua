@@ -1,7 +1,7 @@
 local core = {}
 local FRICTION = 0.995 
 local PLAYER_FRICTION = 0.985 
-local PLAYER_ACCEL = 500 
+local PLAYER_ACCEL = 450 
 
 local KICKING_SPEED_MULT = 0.75
 local SPEED_TRANSITION_TIME = 1.25 
@@ -166,6 +166,8 @@ function core.update_physics(dt)
         state.player.y = 480 - state.player.radius
         state.player.vy = 0 
     end
+    print("Ball X: " .. state.ball.x .. " | Player X: " .. state.player.x)
+    --print("Ball Y: " .. state.ball.y .. " | Player Y: " .. state.player.y)
 end
 
 return core

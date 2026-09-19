@@ -3,7 +3,7 @@ local core = require("game_core")
 local draw = require("game_draw")
 
 local FPS = 144
-local MS_PER_FRAME = math.floor(1000/FPS)
+local MS_PER_FRAME = 1000/FPS
 
 function update(dt_ms)
     local dt = dt_ms / 1000.0
