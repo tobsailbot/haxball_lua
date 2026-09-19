@@ -1,13 +1,13 @@
 local core = {}
-local FRICTION = 0.995 -- Fricción de la pelota
-local PLAYER_FRICTION = 0.98 -- Fricción del jugador (crea el deslizamiento al soltar teclas)
-local PLAYER_ACCEL = 600 -- Aceleración del jugador (reemplaza la velocidad fija)
+local FRICTION = 0.995 
+local PLAYER_FRICTION = 0.985 
+local PLAYER_ACCEL = 500 
 
 local KICKING_SPEED_MULT = 0.75
-local SPEED_TRANSITION_TIME = 1.25 -- Duración de la transición en segundos
+local SPEED_TRANSITION_TIME = 1.25 
 local SPEED_CHANGE_RATE = (1.0 - KICKING_SPEED_MULT) / SPEED_TRANSITION_TIME
 local IMPULSE_FORCE = 1
-local BALL_PUSH_FACTOR = 0.15 -- Porcentaje de la velocidad de la pelota que se transfiere al jugador al impactar
+local BALL_PUSH_FACTOR = 0.15 
 
 local KICK_REACH = 8
 
@@ -26,11 +26,11 @@ local function check_collision(state)
     local dy = state.ball.y - state.player.y
     local distance = math.sqrt(dx * dx + dy * dy)
     
--- Prevenir división por cero
+    -- Prevenir división por cero
     if distance == 0 then distance = 0.001 end 
 
     local min_dist = state.player.radius + state.ball.radius
-    local kick_dist = min_dist + KICK_REACH -- El radio expandido para patear
+    local kick_dist = min_dist + KICK_REACH 
 
     local nx = dx / distance
     local ny = dy / distance
@@ -47,7 +47,7 @@ local function check_collision(state)
 
         -- Si la pelota va muy rápido, empuja al jugador
         local ball_speed = math.sqrt(state.ball.vx^2 + state.ball.vy^2)
-        if ball_speed > 80 then 
+        if ball_speed > 150 then 
             state.player.vx = state.player.vx - nx * ball_speed * BALL_PUSH_FACTOR
             state.player.vy = state.player.vy - ny * ball_speed * BALL_PUSH_FACTOR
         end
@@ -55,7 +55,7 @@ local function check_collision(state)
         -- Si chocan pero NO está pateando, aplicamos el rebote suave
         if not state.player.kicking then
             local player_speed = math.sqrt(state.player.vx^2 + state.player.vy^2)
-            local bounce_force = IMPULSE_FORCE + (player_speed * 0.2)
+            local bounce_force = IMPULSE_FORCE
             state.ball.vx = state.ball.vx + nx * bounce_force
             state.ball.vy = state.ball.vy + ny * bounce_force
         end
@@ -63,9 +63,14 @@ local function check_collision(state)
 
     -- 2. Detectar pateo con tolerancia más amplia (Hitbox extendido)
     if state.player.kicking and distance < kick_dist then
-        local kick_force = IMPULSE_FORCE * 350  -- Fuerza de tu tiro original
+        local kick_force = IMPULSE_FORCE * 350  
         state.ball.vx = state.ball.vx + nx * kick_force
         state.ball.vy = state.ball.vy + ny * kick_force
+        
+        -- Novedad: Desactiva el estado de pateo inmediatamente después de impactar.
+        -- Esto obliga al jugador a soltar y volver a presionar la tecla Espacio,
+        -- y le devuelve su velocidad de movimiento gradualmente.
+        state.player.kicking = false
     end
 end
 
