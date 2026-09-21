@@ -8,7 +8,6 @@ local KICKING_SPEED_MULT = 0.75
 local SPEED_TRANSITION_TIME = 1.25 
 local SPEED_CHANGE_RATE = (1.0 - KICKING_SPEED_MULT) / SPEED_TRANSITION_TIME
 local IMPULSE_FORCE = 1
-local BALL_PUSH_FACTOR = 0.075
 
 local KICK_REACH = 8
 
@@ -21,6 +20,94 @@ core.state = {
         { id = 2, team = "blue", color = '#4d4dff', x = 600, y = 240, vx = 0, vy = 0, radius = 15, up = false, down = false, left = false, right = false, kicking = false, speed_mult = 1.0 }
     }
 }
+
+-- Constantes de los postes
+local POST_RADIUS = 6
+local POSTS = {
+    { x = 50, y = 180 }, { x = 50, y = 300 }, -- Postes izquierdos
+    { x = 750, y = 180 }, { x = 750, y = 300 } -- Postes derechos
+}
+
+-- Función para rebotar contra los postes cilíndricos
+local function check_posts(entity, is_ball)
+    local bounce = is_ball and 0.8 or 0.2 
+
+    for _, post in ipairs(POSTS) do
+        local dx = entity.x - post.x
+        local dy = entity.y - post.y
+        local dist = math.sqrt(dx * dx + dy * dy)
+        if dist == 0 then dist = 0.001 end
+        
+        local min_dist = entity.radius + POST_RADIUS
+        if dist < min_dist then
+            local overlap = min_dist - dist
+            local nx = dx / dist
+            local ny = dy / dist
+            
+            -- Separar físicamente la entidad del poste
+            entity.x = entity.x + nx * overlap
+            entity.y = entity.y + ny * overlap
+            
+            -- Calcular el rebote circular
+            local vel_along_normal = entity.vx * nx + entity.vy * ny
+            if vel_along_normal < 0 then
+                local impulse = -(1 + bounce) * vel_along_normal
+                entity.vx = entity.vx + impulse * nx
+                entity.vy = entity.vy + impulse * ny
+            end
+        end
+    end
+end
+
+-- Sistema de límites desacoplado (Soluciona la teletransportación)
+local function apply_bounds(entity, is_ball)
+    local r = entity.radius
+    local bounce = is_ball and -0.8 or 0
+
+    -- 1. Límites horizontales (Piso y Techo generales)
+    if entity.y < 60 + r then 
+        entity.y = 60 + r; entity.vy = entity.vy * bounce 
+    end
+    if entity.y > 420 - r then 
+        entity.y = 420 - r; entity.vy = entity.vy * bounce 
+    end
+
+    -- 2. Zonas de los arcos (Paredes internas superior e inferior)
+    if entity.x < 50 then
+        if entity.y < 180 + r then 
+            entity.y = 180 + r; entity.vy = entity.vy * bounce 
+        end
+        if entity.y > 300 - r then 
+            entity.y = 300 - r; entity.vy = entity.vy * bounce 
+        end
+    elseif entity.x > 750 then
+        if entity.y < 180 + r then 
+            entity.y = 180 + r; entity.vy = entity.vy * bounce 
+        end
+        if entity.y > 300 - r then 
+            entity.y = 300 - r; entity.vy = entity.vy * bounce 
+        end
+    end
+
+    -- 3. Límites verticales (Paredes principales y fondos de arco)
+    if entity.y > 180 and entity.y < 300 then
+        -- Estamos a la altura de los arcos (Límites del fondo de la red)
+        if entity.x < 25 + r then 
+            entity.x = 25 + r; entity.vx = entity.vx * bounce 
+        end
+        if entity.x > 775 - r then 
+            entity.x = 775 - r; entity.vx = entity.vx * bounce 
+        end
+    else
+        -- Estamos en la cancha principal (Paredes laterales normales)
+        if entity.x < 50 + r then 
+            entity.x = 50 + r; entity.vx = entity.vx * bounce 
+        end
+        if entity.x > 750 - r then 
+            entity.x = 750 - r; entity.vx = entity.vx * bounce 
+        end
+    end
+end
 
 local function check_collision(state)
     -- 1. Colisión entre Jugadores (Física elástica para empujes)
@@ -200,25 +287,9 @@ function core.update_physics(dt)
     state.ball.x = state.ball.x + state.ball.vx * dt
     state.ball.y = state.ball.y + state.ball.vy * dt
 
-    -- 8. Rebote de la pelota en los bordes
-    if state.ball.x < state.ball.radius then 
-        state.ball.x = state.ball.radius; state.ball.vx = -state.ball.vx * 0.8 
-    end
-    if state.ball.x > 750 - state.ball.radius then 
-        state.ball.x = 750 - state.ball.radius; state.ball.vx = -state.ball.vx * 0.8 
-    end
-    if state.ball.x < 50 + state.ball.radius then 
-        state.ball.x = 50 + state.ball.radius; state.ball.vx = -state.ball.vx * 0.8 
-    end
-    if state.ball.y < state.ball.radius then 
-        state.ball.y = state.ball.radius; state.ball.vy = -state.ball.vy * 0.8 
-    end
-    if state.ball.y < 60 + state.ball.radius then 
-        state.ball.y = 60 + state.ball.radius; state.ball.vy = -state.ball.vy * 0.8 
-    end
-    if state.ball.y > 420 - state.ball.radius then 
-        state.ball.y = 420 - state.ball.radius; state.ball.vy = -state.ball.vy * 0.8 
-    end
+    -- NUEVO: Comprobar postes y límites para la pelota
+    check_posts(state.ball, true)
+    apply_bounds(state.ball, true)
 end
 
 return core
