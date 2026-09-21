@@ -13,12 +13,20 @@ end
 
 function handle_key_evt(evt_id, code)
     local is_pressed = (evt_id == "keydown")
+
+    -- Controles Jugador 1 (Rojo)
+    if code == "KeyW" then core.state.players[1].up = is_pressed
+    elseif code == "KeyS" then core.state.players[1].down = is_pressed
+    elseif code == "KeyA" then core.state.players[1].left = is_pressed
+    elseif code == "KeyD" then core.state.players[1].right = is_pressed
+    elseif code == "Space" then core.state.players[1].kicking = is_pressed
     
-    if code == "ArrowUp" or code == "KeyW" then core.state.player.up = is_pressed
-    elseif code == "ArrowDown" or code == "KeyS" then core.state.player.down = is_pressed
-    elseif code == "ArrowLeft" or code == "KeyA" then core.state.player.left = is_pressed
-    elseif code == "ArrowRight" or code == "KeyD" then core.state.player.right = is_pressed
-    elseif code == "Space" then core.state.player.kicking = is_pressed
+    -- Controles Jugador 2 (Azul)
+    elseif code == "ArrowUp" then core.state.players[2].up = is_pressed
+    elseif code == "ArrowDown" then core.state.players[2].down = is_pressed
+    elseif code == "ArrowLeft" then core.state.players[2].left = is_pressed
+    elseif code == "ArrowRight" then core.state.players[2].right = is_pressed
+    elseif code == "ShiftRight" then core.state.players[2].kicking = is_pressed
     end
     
     return true

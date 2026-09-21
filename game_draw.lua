@@ -16,15 +16,22 @@ function draw.render(state)
     
     draw_field()
     
-    -- Configurar borde del jugador según el estado de pateo
-    local p_outline = '#000000'
-    local p_thickness = 2
-    if state.player.kicking then
-        p_outline = '#ffffff'
-        p_thickness = 3
+    -- Recorrer y dibujar a todos los jugadores
+    for _, p in ipairs(state.players) do
+        -- Configurar borde del jugador según su propio estado de pateo
+        local p_outline = '#000000'
+        local p_thickness = 2
+        
+        if p.kicking then
+            p_outline = '#ffffff'
+            p_thickness = 3
+        end
+        
+        -- Dibuja usando el color del equipo (p.color) en lugar de rojo fijo
+        alexgames.draw_circle(p.color, p_outline, p.y, p.x, p.radius, p_thickness)
     end
     
-    alexgames.draw_circle('#ff0000', p_outline, state.player.y, state.player.x, state.player.radius, p_thickness)
+    -- Dibujar la pelota por encima de los jugadores
     alexgames.draw_circle('#ffffff', '#000000', state.ball.y, state.ball.x, state.ball.radius, 2)
     
     alexgames.draw_refresh()
