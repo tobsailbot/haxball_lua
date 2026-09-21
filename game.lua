@@ -33,6 +33,7 @@ function handle_key_evt(evt_id, code)
 end
 
 function start_game()
+    alexgames.set_status_msg("Fútbol de mesa - Controles: Jugador 1 (WASD + Espacio), Jugador 2 (Flechas + Shift Derecho)")
     alexgames.enable_evt("key")
     alexgames.set_timer_update_ms(MS_PER_FRAME)
 end
