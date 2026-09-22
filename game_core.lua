@@ -18,6 +18,7 @@ core.state = {
     score = { red = 0, blue = 0 },
     goal_scored = false,
     goal_timer = 0,
+    match_time = 0, -- ¡Nueva variable para el cronómetro!
     players = {
         { id = 1, team = "red", color = '#ff0000', x = 200, y = 240, vx = 0, vy = 0, radius = 15, up = false, down = false, left = false, right = false, kicking = false, speed_mult = 1.0 },
         { id = 2, team = "blue", color = '#4d4dff', x = 600, y = 240, vx = 0, vy = 0, radius = 15, up = false, down = false, left = false, right = false, kicking = false, speed_mult = 1.0 }
@@ -223,6 +224,11 @@ end
 
 function core.update_physics(dt)
     local state = core.state
+
+    -- Si no hay gol en proceso, el tiempo sigue corriendo
+    if not state.goal_scored then
+        state.match_time = state.match_time + dt
+    end
 
     -- 1. Revisar sistema de goles
     check_goal(state)
