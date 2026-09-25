@@ -3,7 +3,7 @@ local core = {}
 
 local FRICTION = 0.995 
 local PLAYER_FRICTION = 0.985 
-local PLAYER_ACCEL = 400 
+local PLAYER_ACCEL = 350
 
 local KICKING_SPEED_MULT = 0.75
 local SPEED_TRANSITION_TIME = 1.25 
@@ -12,27 +12,25 @@ local IMPULSE_FORCE = 1
 
 local KICK_REACH = 8
 
--- Estado global actualizado con variables para el gol
 core.state = {
     ball = { x = 400, y = 240, vx = 0, vy = 0, radius = 11 },
     score = { red = 0, blue = 0 },
     goal_scored = false,
     goal_timer = 0,
-    match_time = 0, -- ¡Nueva variable para el cronómetro!
+    match_time = 0,
+    fps = 0,
     players = {
-        { id = 1, team = "red", color = '#ff0000', x = 200, y = 240, vx = 0, vy = 0, radius = 15, up = false, down = false, left = false, right = false, kicking = false, speed_mult = 1.0 },
+        { id = 1, team = "red", color = '#ff0000', x = 200, y = 240, vx = 0, vy = 0, radius = 15, up = false, down = false, left = false, right = false, kicking = false, speed_mult = 1.0, pad_active = false, pad_origin = {x=0, y=0}, pad_vec = {x=0, y=0} },
         { id = 2, team = "blue", color = '#4d4dff', x = 600, y = 240, vx = 0, vy = 0, radius = 15, up = false, down = false, left = false, right = false, kicking = false, speed_mult = 1.0 }
     }
 }
 
--- Constantes de los postes
 local POST_RADIUS = 6
 local POSTS = {
-    { x = 50, y = 180 }, { x = 50, y = 300 }, -- Postes izquierdos
-    { x = 750, y = 180 }, { x = 750, y = 300 } -- Postes derechos
+    { x = 50, y = 180 }, { x = 50, y = 300 },
+    { x = 750, y = 180 }, { x = 750, y = 300 }
 }
 
--- Función para rebotar contra los postes cilíndricos
 local function check_posts(entity, is_ball)
     local bounce = is_ball and 0.8 or 0.2 
 
@@ -61,53 +59,31 @@ local function check_posts(entity, is_ball)
     end
 end
 
--- Sistema de límites
 local function apply_bounds(entity, is_ball)
     local r = entity.radius
     local bounce = is_ball and -0.8 or 0
 
-    if entity.y < 60 + r then 
-        entity.y = 60 + r; entity.vy = entity.vy * bounce 
-    end
-    if entity.y > 420 - r then 
-        entity.y = 420 - r; entity.vy = entity.vy * bounce 
-    end
+    if entity.y < 60 + r then entity.y = 60 + r; entity.vy = entity.vy * bounce end
+    if entity.y > 420 - r then entity.y = 420 - r; entity.vy = entity.vy * bounce end
 
     if entity.x < 50 then
-        if entity.y < 180 + r then 
-            entity.y = 180 + r; entity.vy = entity.vy * bounce 
-        end
-        if entity.y > 300 - r then 
-            entity.y = 300 - r; entity.vy = entity.vy * bounce 
-        end
+        if entity.y < 180 + r then entity.y = 180 + r; entity.vy = entity.vy * bounce end
+        if entity.y > 300 - r then entity.y = 300 - r; entity.vy = entity.vy * bounce end
     elseif entity.x > 750 then
-        if entity.y < 180 + r then 
-            entity.y = 180 + r; entity.vy = entity.vy * bounce 
-        end
-        if entity.y > 300 - r then 
-            entity.y = 300 - r; entity.vy = entity.vy * bounce 
-        end
+        if entity.y < 180 + r then entity.y = 180 + r; entity.vy = entity.vy * bounce end
+        if entity.y > 300 - r then entity.y = 300 - r; entity.vy = entity.vy * bounce end
     end
 
     if entity.y > 180 and entity.y < 300 then
-        if entity.x < 25 + r then 
-            entity.x = 25 + r; entity.vx = entity.vx * bounce 
-        end
-        if entity.x > 775 - r then 
-            entity.x = 775 - r; entity.vx = entity.vx * bounce 
-        end
+        if entity.x < 25 + r then entity.x = 25 + r; entity.vx = entity.vx * bounce end
+        if entity.x > 775 - r then entity.x = 775 - r; entity.vx = entity.vx * bounce end
     else
-        if entity.x < 50 + r then 
-            entity.x = 50 + r; entity.vx = entity.vx * bounce 
-        end
-        if entity.x > 750 - r then 
-            entity.x = 750 - r; entity.vx = entity.vx * bounce 
-        end
+        if entity.x < 50 + r then entity.x = 50 + r; entity.vx = entity.vx * bounce end
+        if entity.x > 750 - r then entity.x = 750 - r; entity.vx = entity.vx * bounce end
     end
 end
 
 local function check_collision(state)
-    -- 1. Colisión entre Jugadores
     local p1 = state.players[1]
     local p2 = state.players[2]
     local pdx = p2.x - p1.x
@@ -140,12 +116,10 @@ local function check_collision(state)
         end
     end
 
-    -- 2. Colisión de la Pelota con cada Jugador
     for _, p in ipairs(state.players) do
         local dx = state.ball.x - p.x
         local dy = state.ball.y - p.y
         local distance = math.sqrt(dx * dx + dy * dy)
-        
         if distance == 0 then distance = 0.001 end 
 
         local min_dist = p.radius + state.ball.radius
@@ -156,7 +130,6 @@ local function check_collision(state)
 
         if distance < min_dist then
             local overlap = min_dist - distance
-
             state.ball.x = state.ball.x + nx * (overlap * 0.8)
             state.ball.y = state.ball.y + ny * (overlap * 0.8)
             p.x = p.x - nx * (overlap * 0.2)
@@ -170,10 +143,8 @@ local function check_collision(state)
                 if not p.kicking then
                     local ball_restitution = 0.2 
                     local impulse = -(1 + ball_restitution) * vel_along_normal
-                    
                     state.ball.vx = state.ball.vx + impulse * nx
                     state.ball.vy = state.ball.vy + impulse * ny
-                    
                     local mass_ratio = 0.15 
                     p.vx = p.vx - (impulse * mass_ratio) * nx
                     p.vy = p.vy - (impulse * mass_ratio) * ny
@@ -190,34 +161,25 @@ local function check_collision(state)
     end
 end
 
--- Función nueva para revisar si la pelota cruzó la línea de gol
 local function check_goal(state)
     if state.goal_scored then return end
     
     local in_goal_y = (state.ball.y > 180 and state.ball.y < 300)
     
-    -- Gol a favor del equipo Azul (Arco Izquierdo)
     if state.ball.x < 50 and in_goal_y then
         state.score.blue = state.score.blue + 1
         state.goal_scored = true
         state.goal_timer = 4.0
-        
-        -- Cámara lenta cortando la velocidad bruscamente
         state.ball.vx = state.ball.vx * 0.2
         state.ball.vy = state.ball.vy * 0.2
-        
         alexgames.set_status_msg("¡GOL DEL EQUIPO AZUL! | Marcador: Rojo " .. state.score.red .. " - Azul " .. state.score.blue)
         
-    -- Gol a favor del equipo Rojo (Arco Derecho)
     elseif state.ball.x > 750 and in_goal_y then
         state.score.red = state.score.red + 1
         state.goal_scored = true
         state.goal_timer = 4.0
-        
-        -- Cámara lenta cortando la velocidad bruscamente
         state.ball.vx = state.ball.vx * 0.2
         state.ball.vy = state.ball.vy * 0.2
-        
         alexgames.set_status_msg("¡GOL DEL EQUIPO ROJO! | Marcador: Rojo " .. state.score.red .. " - Azul " .. state.score.blue)
     end
 end
@@ -225,23 +187,15 @@ end
 function core.update_physics(dt)
     local state = core.state
 
-    -- Si no hay gol en proceso, el tiempo sigue corriendo
     if not state.goal_scored then
         state.match_time = state.match_time + dt
     end
 
-    -- 1. Revisar sistema de goles
     check_goal(state)
 
-    -- Manejar la secuencia de pausa tras el gol
     if state.goal_scored then
         state.goal_timer = state.goal_timer - dt
-        
-        -- Ya no aplicamos fricción continua extra. 
-        -- La pelota solo recibió el frenazo inicial del 15% en check_goal().
-        
         if state.goal_timer <= 0 then
-            -- Restablecer las posiciones de la pelota y los jugadores
             state.ball.x, state.ball.y = 400, 240
             state.ball.vx, state.ball.vy = 0, 0
             
@@ -256,8 +210,13 @@ function core.update_physics(dt)
         end
     end
 
+    -- FÍSICA INDEPENDIENTE DEL TIEMPO 
+    local frame_ratio = dt * 144
+    -- Se reemplaza math.pow por el operador de exponenciación ^ de Lua 5.4
+    local current_player_friction = PLAYER_FRICTION ^ frame_ratio
+    local current_ball_friction = FRICTION ^ frame_ratio
+
     for _, p in ipairs(state.players) do
-        -- Los jugadores SIEMPRE actualizan sus inputs y velocidad
         if p.kicking then
             p.speed_mult = p.speed_mult - (SPEED_CHANGE_RATE * dt)
             if p.speed_mult < KICKING_SPEED_MULT then
@@ -271,50 +230,53 @@ function core.update_physics(dt)
         end
 
         local current_accel = PLAYER_ACCEL * p.speed_mult
-
         local move_x, move_y = 0, 0
-        if p.up then move_y = move_y - 1 end
-        if p.down then move_y = move_y + 1 end
-        if p.left then move_x = move_x - 1 end
-        if p.right then move_x = move_x + 1 end
+        local intensity = 1.0
 
-        if move_x ~= 0 or move_y ~= 0 then
-            local length = math.sqrt(move_x * move_x + move_y * move_y)
-            move_x = move_x / length
-            move_y = move_y / length
-            
-            p.vx = p.vx + move_x * current_accel * dt
-            p.vy = p.vy + move_y * current_accel * dt
+        if p.pad_active then
+            move_x = p.pad_vec.x
+            move_y = p.pad_vec.y
+            intensity = math.sqrt(move_x * move_x + move_y * move_y)
+            if intensity > 0 then
+                move_x = move_x / intensity
+                move_y = move_y / intensity
+            end
+        else
+            if p.up then move_y = move_y - 1 end
+            if p.down then move_y = move_y + 1 end
+            if p.left then move_x = move_x - 1 end
+            if p.right then move_x = move_x + 1 end
+
+            if move_x ~= 0 or move_y ~= 0 then
+                local length = math.sqrt(move_x * move_x + move_y * move_y)
+                if length > 1 then
+                    move_x = move_x / length
+                    move_y = move_y / length
+                end
+            end
         end
 
-        -- Aplicar fricción (deslizamiento) y mover al jugador
-        p.vx = p.vx * PLAYER_FRICTION
-        p.vy = p.vy * PLAYER_FRICTION
+        if move_x ~= 0 or move_y ~= 0 then
+            p.vx = p.vx + move_x * (current_accel * intensity) * dt
+            p.vy = p.vy + move_y * (current_accel * intensity) * dt
+        end
+
+        p.vx = p.vx * current_player_friction
+        p.vy = p.vy * current_player_friction
 
         p.x = p.x + p.vx * dt
         p.y = p.y + p.vy * dt
 
-        -- Limitar al jugador dentro de la cancha
-        if p.x < 0 + p.radius then 
-            p.x = 0 + p.radius; p.vx = 0 
-        end
-        if p.x > 800 - p.radius then 
-            p.x = 800 - p.radius; p.vx = 0 
-        end
-        if p.y < 0 + p.radius then 
-            p.y = 0 + p.radius; p.vy = 0 
-        end
-        if p.y > 480 - p.radius then 
-            p.y = 480 - p.radius; p.vy = 0 
-        end
+        if p.x < 0 + p.radius then p.x = 0 + p.radius; p.vx = 0 end
+        if p.x > 800 - p.radius then p.x = 800 - p.radius; p.vx = 0 end
+        if p.y < 0 + p.radius then p.y = 0 + p.radius; p.vy = 0 end
+        if p.y > 480 - p.radius then p.y = 480 - p.radius; p.vy = 0 end
     end
 
-    -- Las colisiones siempre se calculan. Si patean la pelota durante los 3 segundos, saldrá disparada normal.
     check_collision(state)
 
-    -- Fricción y movimiento estándar de la pelota
-    state.ball.vx = state.ball.vx * FRICTION
-    state.ball.vy = state.ball.vy * FRICTION
+    state.ball.vx = state.ball.vx * current_ball_friction
+    state.ball.vy = state.ball.vy * current_ball_friction
 
     state.ball.x = state.ball.x + state.ball.vx * dt
     state.ball.y = state.ball.y + state.ball.vy * dt
